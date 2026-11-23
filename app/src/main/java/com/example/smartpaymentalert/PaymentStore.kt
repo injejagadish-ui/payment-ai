@@ -74,7 +74,11 @@ fun add(
 
     // Prevent duplicate updates of the same Android notification.
     if (notificationKey.isNotBlank() &&
-        old.any { it.notificationKey == notificationKey }
+        old.any {
+    it.notificationKey == notificationKey &&
+    it.amount == amount &&
+    kotlin.math.abs(it.time - time) < 10 * 60 * 1000L
+        }
     ) {
         return false
     }
