@@ -1,4 +1,3 @@
-
 package com.example.smartpaymentalert
 
 import android.app.Notification
@@ -25,21 +24,13 @@ class PaymentNotificationListener : NotificationListenerService() {
     )
 
     private val incomingWords = listOf(
-        "credited",
-        "received",
-        "deposited",
-        "money received",
-        "upi credit",
-        "credit alert"
+        "credited", "received", "deposited",
+        "money received", "upi credit", "credit alert"
     )
 
     private val outgoingWords = listOf(
-        "debited",
-        "withdrawn",
-        "sent to",
-        "paid to",
-        "payment to",
-        "purchase"
+        "debited", "withdrawn", "sent to",
+        "paid to", "payment to", "purchase"
     )
 
     private val amountPattern = Regex(
@@ -48,14 +39,11 @@ class PaymentNotificationListener : NotificationListenerService() {
 
     override fun onCreate() {
         super.onCreate()
-
         createChannel()
 
         tts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val result = tts?.setLanguage(
-                    Locale("en", "IN")
-                )
+                val result = tts?.setLanguage(Locale("en", "IN"))
                 ttsReady =
                     result != TextToSpeech.LANG_MISSING_DATA &&
                     result != TextToSpeech.LANG_NOT_SUPPORTED
@@ -63,9 +51,7 @@ class PaymentNotificationListener : NotificationListenerService() {
         }
     }
 
-    override fun onNotificationPosted(
-        sbn: StatusBarNotification
-    ) {
+    override fun onNotificationPosted(sbn: StatusBarNotification) {
         try {
             val extras = sbn.notification.extras
 
@@ -85,16 +71,16 @@ class PaymentNotificationListener : NotificationListenerService() {
                 Notification.EXTRA_SUB_TEXT
             )?.toString() ?: ""
 
-            val message = listOf(
-                title, text, bigText, subText
-            ).filter { it.isNotBlank() }
+            val message = listOf(title, text, bigText, subText)
+                .filter { it.isNotBlank() }
                 .distinct()
                 .joinToString(" ")
 
             processPayment(
                 sbn.packageName,
                 message,
-                sbn.postTime
+                sbn.postTime,
+                sbn.key
             )
 
         } catch (e: Exception) {
@@ -109,12 +95,12 @@ class PaymentNotificationListener : NotificationListenerService() {
     private fun processPayment(
         packageName: String,
         message: String,
-        time: Long
+        time: Long,
+        notificationKey: String
     ) {
         if (message.isBlank()) return
 
         val lower = message.lowercase(Locale.ROOT)
-
         val isKnownApp = packageName in paymentApps
 
         val hasBankWords = listOf(
@@ -125,11 +111,7 @@ class PaymentNotificationListener : NotificationListenerService() {
             incomingWords.any { lower.contains(it) }
 
         if (!isKnownApp && !isLikelyBank) return
-
-        // Reject outgoing transactions.
         if (outgoingWords.any { lower.contains(it) }) return
-
-        // Only accept likely incoming transactions.
         if (incomingWords.none { lower.contains(it) }) return
 
         val match = amountPattern.find(message) ?: return
@@ -146,8 +128,7 @@ class PaymentNotificationListener : NotificationListenerService() {
 
         val source = when (packageName) {
             "com.phonepe.app" -> "PhonePe"
-            "com.google.android.apps.nbu.paisa.user" ->
-                "Google Pay"
+            "com.google.android.apps.nbu.paisa.user" -> "Google Pay"
             "net.one97.paytm" -> "Paytm"
             else -> "Bank / Other UPI"
         }
@@ -157,7 +138,8 @@ class PaymentNotificationListener : NotificationListenerService() {
             amount,
             source,
             message,
-            time
+            time,
+            notificationKey
         )
 
         if (!added) return
@@ -166,16 +148,11 @@ class PaymentNotificationListener : NotificationListenerService() {
             Locale.US, "%.2f", amount
         )
 
-        val speech = "You have received $spokenAmount rupees"
-
-        showPaymentNotification(
-            source,
-            spokenAmount
-        )
+        showPaymentNotification(source, spokenAmount)
 
         if (ttsReady) {
             tts?.speak(
-                speech,
+                "You have received $spokenAmount rupees",
                 TextToSpeech.QUEUE_ADD,
                 null,
                 "payment_$time"
@@ -191,8 +168,7 @@ class PaymentNotificationListener : NotificationListenerService() {
                 NotificationManager.IMPORTANCE_HIGH
             )
 
-            channel.description =
-                "Notifications for received payments"
+            channel.description = "Notifications for received payments"
 
             getSystemService(NotificationManager::class.java)
                 .createNotificationChannel(channel)
@@ -203,10 +179,7 @@ class PaymentNotificationListener : NotificationListenerService() {
         source: String,
         amount: String
     ) {
-        val intent = Intent(
-            this,
-            MainActivity::class.java
-        )
+        val intent = Intent(this, MainActivity::class.java)
 
         val pendingIntent = PendingIntent.getActivity(
             this,
